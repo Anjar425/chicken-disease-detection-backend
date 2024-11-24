@@ -1,0 +1,16 @@
+runtime: python
+env: flex
+
+runtime_config:
+  operating_system: "ubuntu22"
+  runtime_version: "3.10"
+
+manual_scaling:
+  instances: 1
+
+resources:
+  cpu: 2
+  memory_gb: 2.3
+  disk_size_gb: 25
+
+entrypoint: gunicorn -b :$PORT main:app
