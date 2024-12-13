@@ -3,19 +3,22 @@ from vision_model import VisionModel  # Import model
 import torch
 from PIL import Image
 from torchvision import transforms
-import io
 from flask_cors import CORS
 
-# Inisialisasi aplikasi Flask
+# Initialize Flask application
 app = Flask(__name__)
 CORS(app)
 
-# Muat model
-model = VisionModel("densenet", num_classes=10)  # Ganti `num_classes` sesuai kebutuhan Anda
-model.load_state_dict(torch.load('model.pth', map_location=torch.device('cpu')))
-model.eval()
+# Load model
+try:
+    model = VisionModel("densenet", num_classes=4)  # Adjust `num_classes` as needed
+    model.load_state_dict(torch.load('model_final.pth', map_location=torch.device('cpu')))
+    model.eval()
+except Exception as e:
+    model = None
+    model_load_error = str(e)
 
-# Transformasi untuk gambar
+# Image transformation
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -24,18 +27,21 @@ transform = transforms.Compose([
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    if not model:
+        return jsonify({'error': 'Model is not available. Check server setup.'}), 500
+
     try:
-        # Baca file gambar dari request
+        # Check if file is in the request
         if 'file' not in request.files:
-            return jsonify({'error': 'File tidak ditemukan dalam permintaan'}), 400
+            return jsonify({'error': 'No file found in the request'}), 400
 
         file = request.files['file']
-        image = Image.open(file.stream)
+        image = Image.open(file.stream).convert('RGB')
 
-        # Transformasi gambar menjadi tensor
+        # Transform image to tensor
         img_tensor = transform(image).unsqueeze(0)
 
-        # Prediksi
+        # Make prediction
         with torch.no_grad():
             output = model(img_tensor)
             _, predicted_class = torch.max(output, 1)
